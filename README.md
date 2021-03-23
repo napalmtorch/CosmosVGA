@@ -25,5 +25,8 @@ to do various drawing commands, or just use the VGADriverII class for direct acc
 VGA device. When using 320x200 double buffered mode, remember to use VGAGraphics.Display()
 after drawing to swap buffers.
 
+# The default Console Class will no longer work, you will need to use Terminal.cs
+# Please read the file to view all of its features! Its not very complicated
+
 # Example
 ![vgatut](https://user-images.githubusercontent.com/55903118/111919703-b8186780-8a61-11eb-968c-2b3bc14a401f.png)
