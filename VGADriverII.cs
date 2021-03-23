@@ -136,7 +136,7 @@ namespace Cosmos.HAL
         public static VGAMode ModeID { get; private set; }
 
         // buffer
-        private static byte* Buffer;
+        public static byte* Buffer;
         private static MemoryBlock BackBuffer = new MemoryBlock(0x60000, 0x10000);
 
         // color palette - 8 bit
