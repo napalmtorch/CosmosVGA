@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Cosmos.Core;
@@ -177,7 +177,7 @@ namespace Cosmos.HAL
         {
             uint i = 0;
             // text mode
-            if (IsTextMode) { for (i = 0; i < (Width * Height) * 2; i += 2) { Buffer[i] = 0x20; Buffer[i + 1] = color; } }
+            if (IsTextMode) { for (i = 0; i < (Width * Height) * 2; i += 2) { Buffer[i] = 0x20; Buffer[i + 1] = (byte) (color << 4); } }
             // graphics mode
             else if (!IsTextMode && !IsDoubleBuffered) { for (i = 0; i < Width * Height; i++) { Buffer[i] = color; } }
             // double buffered graphics mode
