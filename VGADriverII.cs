@@ -4,7 +4,7 @@ using System.Text;
 using Cosmos.Core;
 using Cosmos.System.Graphics;
 
-namespace GlassOS.Lib.Graphics
+namespace Cosmos.HAL
 {
     // vga mode identifiers
     public enum VGAMode
