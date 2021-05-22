@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Cosmos.HAL;
 using Cosmos.System.Graphics;
 
 namespace Cosmos.HAL
 {
-    public static class Terminal
+    public static class VGATerminal
     {
         // cursor
         public static int CursorX { get; private set; }
@@ -116,8 +113,10 @@ namespace Cosmos.HAL
         // scroll by one line
         private static unsafe void Scroll()
         {
-            VGADriverII.MemoryCopy(VGADriverII.Buffer + (VGADriverII.Width * 2), VGADriverII.Buffer, (VGADriverII.Width * (VGADriverII.Height - 1)) * 2);
-            for (int i = 0; i < VGADriverII.Width; i++) { PutCharacter(i, VGADriverII.Height - 1, ' ', TextColor, BackColor); }
+            //VGADriverII.MemoryCopy(VGADriverII.Buffer + (VGADriverII.Width * 2), VGADriverII.Buffer, VGADriverII.Width * (VGADriverII.Height - 1) * 2);
+            
+            for (int i = 0; i < VGADriverII.Width; i++)
+                PutCharacter(i, VGADriverII.Height - 1, ' ', TextColor, BackColor);
         }
 
         // set cursor position
