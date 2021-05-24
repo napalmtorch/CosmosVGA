@@ -157,7 +157,7 @@ namespace Cosmos.HAL
 
         // buffer
         public static byte* Buffer;
-        private static readonly MemoryBlock BackBuffer = new MemoryBlock(0x60000, 0x10000);
+        private static MemoryBlock BackBuffer;
 
         // color palette - 8 bit
         public static uint[] Palette256 = new uint[256]
@@ -184,33 +184,28 @@ namespace Cosmos.HAL
         public static uint[] Palette16 = new uint[16]
         { 0x000000, 0x00001F, 0x001F00, 0x001F1F, 0x1F0000, 0x1F001F, 0x2F1F00, 0x2F2F2F, 0x1F1F1F, 0x00103F, 0x003F00, 0x003F3F, 0x3F0000, 0x3F003F, 0x3F3F00, 0x3F3F3F, };
 
-        // initialization
-        public static void Initialize(VGAMode mode)
-        {
-            SetMode(mode);
-        }
-
         #region Graphics Handling
 
         // clear screen
         public static void Clear(byte color)
         {
-            uint i = 0;
-
             // text mode
             if (IsTextMode)
-                for (i = 0; i < Width * Height * 2; i += 2)
+                for (uint i = 0; i < Width * Height * 2; i += 2)
                 {
                     Buffer[i] = 0x20;
                     Buffer[i + 1] = (byte)(color << 4);
                 }
             // graphics mode
-            else if (!IsTextMode && !IsDoubleBuffered)
-                for (i = 0; i < Width * Height; i++)
-                    Buffer[i] = color;
-            // double buffered graphics mode
-            else if (!IsTextMode && IsDoubleBuffered)
-                BackBuffer.Fill(color);
+            else
+            {
+                // double buffered
+                if (IsDoubleBuffered)
+                    BackBuffer.Fill(color);
+                else
+                    for (uint i = 0; i < Width * Height; i++)
+                        Buffer[i] = color;
+            }
         }
 
         // draw pixel
@@ -281,6 +276,9 @@ namespace Cosmos.HAL
             Width = w; Height = h; Depth = depth;
             IsTextMode = text;
             IsDoubleBuffered = db;
+
+            if (db)
+                BackBuffer = new MemoryBlock(0x60000, (uint) (Width * Height * Depth));
         }
 
         // set current video mode
@@ -359,9 +357,6 @@ namespace Cosmos.HAL
                 default:
                     break;
             }
-
-            // clear the screen
-            Clear(0);
         }
 
         // get frame buffer segment

@@ -13,7 +13,7 @@ namespace Cosmos.System.Graphics
         public static void Clear(VGAColor color) { vga.Clear((byte)color); }
 
         // initialize the driver
-        public static void Initialize(VGAMode mode) { vga.Initialize(mode); }
+        public static void Initialize(VGAMode mode) { vga.SetMode(mode); }
 
         // swap back buffer if able
         public static void Display() { vga.Display(); }

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Cosmos.System.Graphics
+﻿namespace Cosmos.System.Graphics
 {
 	public enum VGAFont
     {
-    		Font3x5,
+    	Font3x5,
 		Font8x8,
 		Font8x16,
     }
