@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Cosmos.Core;
+﻿using Cosmos.Core;
 using Cosmos.System.Graphics;
 
 namespace Cosmos.HAL
@@ -14,6 +11,8 @@ namespace Cosmos.HAL
         Text90x60,
         Pixel320x200,
         Pixel320x200DB,
+        Pixel640x480,
+        Pixel640x480DB,
     }
 
     // vga mode register dumps
@@ -102,6 +101,27 @@ namespace Cosmos.HAL
             0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
             0x41, 0x00, 0x0F, 0x00, 0x00
         };
+
+        // pixel 640x480x16
+        public static byte[] Mode640x480x16_Pixel = new byte[]
+        {
+            /* MISC */
+	        0xE3,
+            /* SEQ */
+	        0x03, 0x01, 0x08, 0x00, 0x06,
+            /* CRTC */
+	        0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0x0B, 0x3E,
+            0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xEA, 0x0C, 0xDF, 0x28, 0x00, 0xE7, 0x04, 0xE3,
+            0xFF,
+            /* GC */
+	        0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x05, 0x0F,
+            0xFF,
+            /* AC */
+	        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x14, 0x07,
+            0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
+            0x01, 0x00, 0x0F, 0x00, 0x00
+        };
     }
 
     // vga controller class
@@ -137,7 +157,7 @@ namespace Cosmos.HAL
 
         // buffer
         public static byte* Buffer;
-        private static MemoryBlock BackBuffer = new MemoryBlock(0x60000, 0x10000);
+        private static MemoryBlock BackBuffer;
 
         // color palette - 8 bit
         public static uint[] Palette256 = new uint[256]
@@ -164,60 +184,65 @@ namespace Cosmos.HAL
         public static uint[] Palette16 = new uint[16]
         { 0x000000, 0x00001F, 0x001F00, 0x001F1F, 0x1F0000, 0x1F001F, 0x2F1F00, 0x2F2F2F, 0x1F1F1F, 0x00103F, 0x003F00, 0x003F3F, 0x3F0000, 0x3F003F, 0x3F3F00, 0x3F3F3F, };
 
-        // initialization
-        public static void Initialize(VGAMode mode)
-        {
-            SetMode(mode);
-        }
-
         #region Graphics Handling
 
         // clear screen
         public static void Clear(byte color)
         {
-            uint i = 0;
             // text mode
-            if (IsTextMode) { for (i = 0; i < (Width * Height) * 2; i += 2) { Buffer[i] = 0x20; Buffer[i + 1] = color; } }
+            if (IsTextMode)
+                for (uint i = 0; i < Width * Height * 2; i += 2)
+                {
+                    Buffer[i] = 0x20;
+                    Buffer[i + 1] = (byte)(color << 4);
+                }
             // graphics mode
-            else if (!IsTextMode && !IsDoubleBuffered) { for (i = 0; i < Width * Height; i++) { Buffer[i] = color; } }
-            // double buffered graphics mode
-            else if (!IsTextMode && IsDoubleBuffered) { BackBuffer.Fill(color); }
+            else
+            {
+                // double buffered
+                if (IsDoubleBuffered)
+                    BackBuffer.Fill(color);
+                else
+                    for (uint i = 0; i < Width * Height; i++)
+                        Buffer[i] = color;
+            }
         }
 
         // draw pixel
         public static void DrawPixel(ushort x, ushort y, byte color)
         {
-            if (x >= Width || y >= Height) { return; }
-            if (IsTextMode) { return; }
+            if (x >= Width || y >= Height || IsTextMode)
+                return;
+
             uint offset = (uint)(x + (y * Width));
 
             // double buffered
-            if (IsDoubleBuffered) { BackBuffer.Bytes[offset] = color; }
+            if (IsDoubleBuffered)
+                BackBuffer.Bytes[offset] = color;
             // direct
-            else { Buffer[offset] = color; }
+            else
+                Buffer[offset] = color;
         }
 
         // swap back buffer
         public static void Display()
         {
-            // check mode
-            if (ModeID != VGAMode.Pixel320x200DB) { return; }
+            // check if double buffered
+            if (!IsDoubleBuffered)
+                return;
 
             byte* src = (byte*)BackBuffer.Base;
 
             for (uint i = 0; i < Width * Height; i++)
-            {
                 if (*(Buffer + i) != *(src + i))
-                {
                     *(Buffer + i) = *(src + i);
-                }
-            }
         }
 
         // set text-mode cursor position
         public static void SetCursorPos(ushort x, ushort y)
         {
-            if (!IsTextMode) { return; }
+            if (!IsTextMode)
+                return;
             uint offset = (uint)(x + (y * Width));
             PORT_CRTC_WRITE.Byte = 14;
             PORT_CRTC_DATA.Byte = (byte)((offset & 0xFF00) >> 8);
@@ -251,6 +276,9 @@ namespace Cosmos.HAL
             Width = w; Height = h; Depth = depth;
             IsTextMode = text;
             IsDoubleBuffered = db;
+
+            if (db)
+                BackBuffer = new MemoryBlock(0x60000, (uint) (Width * Height * Depth));
         }
 
         // set current video mode
@@ -307,12 +335,28 @@ namespace Cosmos.HAL
                         SetColorPalette(Palette256);
                         break;
                     }
+                // 640x480 graphics mode
+                case VGAMode.Pixel640x480:
+                    {
+                        SetModeProperties(640, 480, 4, false, false);
+                        fixed (byte* ptr = VGAModeRegisters.Mode640x480x16_Pixel) { WriteRegisters(ptr); }
+                        ClearColorPalette();
+                        SetColorPalette(Palette16);
+                        break;
+                    }
+                // 640x480 double buffered graphics mode
+                case VGAMode.Pixel640x480DB:
+                    {
+                        SetModeProperties(640, 480, 4, false, true);
+                        fixed (byte* ptr = VGAModeRegisters.Mode640x480x16_Pixel) { WriteRegisters(ptr); }
+                        ClearColorPalette();
+                        SetColorPalette(Palette16);
+                        break;
+                    }
                 // default to 80x25 text mode
-                default: { break; }
+                default:
+                    break;
             }
-
-            // clear the screen
-            Clear(0);
         }
 
         // get frame buffer segment
@@ -334,10 +378,14 @@ namespace Cosmos.HAL
         private static void WriteRegisters(byte* regs)
         {
             // misc
-            PORT_MISC_WRITE.Byte = *(regs++);
+            PORT_MISC_WRITE.Byte = *regs++;
 
             // sequencer
-            for (byte i = 0; i < 5; i++) { PORT_SEQ_WRITE.Byte = i; PORT_SEQ_DATA.Byte = *(regs++); }
+            for (byte i = 0; i < 5; i++)
+            {
+                PORT_SEQ_WRITE.Byte = i;
+                PORT_SEQ_DATA.Byte = *regs++;
+            }
 
             // crtc
             PORT_CRTC_WRITE.Byte = 0x03;
@@ -348,10 +396,18 @@ namespace Cosmos.HAL
             // registers
             regs[0x03] = (byte)(regs[0x03] | 0x80);
             regs[0x11] = (byte)(regs[0x11] & ~0x80);
-            for (byte i = 0; i < 25; i++) { PORT_CRTC_WRITE.Byte = i; PORT_CRTC_DATA.Byte = *(regs++); }
+            for (byte i = 0; i < 25; i++)
+            { 
+                PORT_CRTC_WRITE.Byte = i;
+                PORT_CRTC_DATA.Byte = *regs++;
+            }
 
             // graphics controller
-            for (byte i = 0; i < 9; i++) { PORT_GC_WRITE.Byte = i; PORT_GC_DATA.Byte = *(regs++); }
+            for (byte i = 0; i < 9; i++)
+            {
+                PORT_GC_WRITE.Byte = i;
+                PORT_GC_DATA.Byte = *regs++;
+            }
 
             // attribute controller
             byte val = 0;
@@ -359,12 +415,11 @@ namespace Cosmos.HAL
             {
                 val = PORT_INSTAT_READ.Byte;
                 PORT_AC_WRITE.Byte = i;
-                PORT_AC_WRITE.Byte = *(regs++);
+                PORT_AC_WRITE.Byte = *regs++;
             }
 
             val = PORT_INSTAT_READ.Byte;
             PORT_AC_WRITE.Byte = 0x20;
-
 
             // set buffer address
             Buffer = GetFrameBufferSegment();

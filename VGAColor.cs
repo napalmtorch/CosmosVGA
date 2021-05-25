@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Cosmos.System.Graphics
+﻿namespace Cosmos.System.Graphics
 {
     public enum VGAColor
     {

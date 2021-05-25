@@ -1,17 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Cosmos.HAL;
+using System;
 using vga = Cosmos.HAL.VGADriverII;
 
 namespace Cosmos.System.Graphics
 {
-    // this class is used to store vga-related graphical functions
+    // this class is used as a wrapper to the vga driver
     public static class VGAGraphics
     {
         private static int fontHeight = 16;
 
         // clear the screen
         public static void Clear(VGAColor color) { vga.Clear((byte)color); }
+
+        // initialize the driver
+        public static void Initialize(VGAMode mode) { vga.SetMode(mode); }
 
         // swap back buffer if able
         public static void Display() { vga.Display(); }
@@ -23,21 +25,22 @@ namespace Cosmos.System.Graphics
         public static void DrawFilledRect(int x, int y, int w, int h, VGAColor color)
         {
             for (int i = 0; i < h; i++)
-            {
-                for (int j = 0; j < w; j++) { DrawPixel(x + j, y + i, color); }
-            }
+                for (int j = 0; j < w; j++)
+                    DrawPixel(x + j, y + i, color);
         }
 
         // draw horizontal line
         public static void DrawLineX(int x, int y, int w, VGAColor color)
         {
-            for (int i = 0; i < w; i++) { DrawPixel(x + i, y, color); }
+            for (int i = 0; i < w; i++)
+                DrawPixel(x + i, y, color);
         }
 
         // draw vertical line
         public static void DrawLineY(int x, int y, int h, VGAColor color)
         {
-            for (int i = 0; i < h; i++) { DrawPixel(x, y + i, color); }
+            for (int i = 0; i < h; i++)
+                DrawPixel(x, y + i, color);
         }
 
         // draw point-to-point line
@@ -57,10 +60,22 @@ namespace Cosmos.System.Graphics
                 DrawPixel(xx, yy, color);
 
                 // increment
-                if ((x0 == x1) && (y0 == y1)) break;
+                if ((x0 == x1) && (y0 == y1))
+                    break;
+
                 var e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; xx += (int)sx; }
-                if (e2 < dx) { err += dx; yy += (int)sy; }
+                
+                if (e2 > -dy)
+                {
+                    err -= dy;
+                    xx += sx;
+                }
+
+                if (e2 < dx)
+                {
+                    err += dx;
+                    yy += sy;
+                }
             }
         }
 
@@ -68,14 +83,13 @@ namespace Cosmos.System.Graphics
         public static void DrawChar(int x, int y, char c, VGAColor fg, VGAFont font)
         {
             // determine font size
-            fontHeight = 8;
-            if (font == VGAFont.Font8x8) { fontHeight = 8; }
-            else if (font == VGAFont.Font8x16) { fontHeight = 16; }
+            if (font == VGAFont.Font8x8)
+                fontHeight = 8;
+
             int p = fontHeight * (byte)c;
 
             // vertical
             for (int cy = 0; cy < fontHeight; cy++)
-            {
                 // horizontal
                 for (byte cx = 0; cx < 8; cx++)
                 {
@@ -84,31 +98,29 @@ namespace Cosmos.System.Graphics
                     {
                         // convert to position and draw
                         if (VGAFontData.ConvertByteToBitAddress(VGAFontData.Font8x8_Data[p + cy], cx + 1))
-                        { DrawPixel(x + (8 - cx), y + cy, fg); }
+                            DrawPixel(x + (8 - cx), y + cy, fg);
                     }
                     // 8x16
                     else if (font == VGAFont.Font8x16)
                     {
                         // convert to position and draw
                         if (VGAFontData.ConvertByteToBitAddress(VGAFontData.Font8x16_Data[p + cy], cx + 1))
-                        { DrawPixel(x + (8 - cx), y + cy, fg); }
+                            DrawPixel(x + (8 - cx), y + cy, fg);
                     }
                 }
-            }
         }
 
         // draw character with background color
         public static void DrawChar(int x, int y, char c, VGAColor fg, VGAColor bg, VGAFont font)
         {
             // determine font size
-            fontHeight = 8;
-            if (font == VGAFont.Font8x8) { fontHeight = 8; }
-            else if (font == VGAFont.Font8x16) { fontHeight = 16; }
+            if (font == VGAFont.Font8x8)
+                fontHeight = 8;
+
             int p = fontHeight * (byte)c;
 
             // vertical
             for (int cy = 0; cy < fontHeight; cy++)
-            {
                 // horizontal
                 for (byte cx = 0; cx < 8; cx++)
                 {
@@ -117,34 +129,44 @@ namespace Cosmos.System.Graphics
                     {
                         // convert to position and draw
                         if (VGAFontData.ConvertByteToBitAddress(VGAFontData.Font8x8_Data[p + cy], cx + 1))
-                        { DrawPixel(x + (8 - cx), y + cy, fg); } else { DrawPixel(x + (8 - cx), y + cy, bg); }
+                            DrawPixel(x + (8 - cx), y + cy, fg);
+                        else
+                            DrawPixel(x + (8 - cx), y + cy, bg);
                     }
                     // 8x16
                     else if (font == VGAFont.Font8x16)
                     {
                         // convert to position and draw
                         if (VGAFontData.ConvertByteToBitAddress(VGAFontData.Font8x16_Data[p + cy], cx + 1))
-                        { DrawPixel(x + (8 - cx), y + cy, fg); } else { DrawPixel(x + (8 - cx), y + cy, bg); }
+                            DrawPixel(x + (8 - cx), y + cy, fg);
+                        else
+                            DrawPixel(x + (8 - cx), y + cy, bg);
                     }
                 }
-            }
         }
 
         // draw string with transparent background
         public static void DrawString(int x, int y, string text, VGAColor fg, VGAFont font)
         {
             // determine font size
-            fontHeight = 8;
-            if (font == VGAFont.Font8x8) { fontHeight = 8; }
-            else if (font == VGAFont.Font8x16) { fontHeight = 16; }
+            if (font == VGAFont.Font8x8)
+                fontHeight = 8;
 
             int xx = x, yy = y;
             for (int i = 0; i < text.Length; i++)
             {
                 // new line
-                if (text[i] == '\n') { xx = x; yy += fontHeight; }
+                if (text[i] == '\n')
+                {
+                    xx = x;
+                    yy += fontHeight;
+                }
                 // character
-                else { DrawChar(xx, yy, text[i], fg, font); xx += 8; }
+                else
+                {
+                    DrawChar(xx, yy, text[i], fg, font);
+                    xx += 8;
+                }
             }
         }
 
@@ -152,17 +174,24 @@ namespace Cosmos.System.Graphics
         public static void DrawString(int x, int y, string text, VGAColor fg, VGAColor bg, VGAFont font)
         {
             // determine font size
-            fontHeight = 8;
-            if (font == VGAFont.Font8x8) { fontHeight = 8; }
-            else if (font == VGAFont.Font8x16) { fontHeight = 16; }
+            if (font == VGAFont.Font8x8)
+                fontHeight = 8;
 
             int xx = x, yy = y;
             for (int i = 0; i < text.Length; i++)
             {
                 // new line
-                if (text[i] == '\n') { xx = x; yy += fontHeight; }
+                if (text[i] == '\n')
+                {
+                    xx = x;
+                    yy += fontHeight;
+                }
                 // character
-                else { DrawChar(xx, yy, text[i], fg, bg, font); xx += 8; }
+                else
+                {
+                    DrawChar(xx, yy, text[i], fg, bg, font);
+                    xx += 8;
+                }
             }
         }
 
@@ -170,25 +199,17 @@ namespace Cosmos.System.Graphics
         public static void DrawImage(int x, int y, VGAImage image)
         {
             for (int yy = 0; yy < image.Height; yy++)
-            {
                 for (int xx = 0; xx < image.Width; xx++)
-                {
                     DrawPixel(x + xx, y + yy, (VGAColor)image.Data[xx + (yy * image.Width)]);
-                }
-            }
         }
 
         // draw custom image format with transparency key
         public static void DrawImage(int x, int y, VGAColor transKey, VGAImage image)
         {
             for (int yy = 0; yy < image.Height; yy++)
-            {
                 for (int xx = 0; xx < image.Width; xx++)
-                {
                     if (image.Data[xx + (yy * image.Width)] != (byte)transKey)
-                    { DrawPixel(x + xx, y + yy, (VGAColor)image.Data[xx + (yy * image.Width)]); }
-                }
-            }
+                        DrawPixel(x + xx, y + yy, (VGAColor)image.Data[xx + (yy * image.Width)]);
         }
     }
 }
